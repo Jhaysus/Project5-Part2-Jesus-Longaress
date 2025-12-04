@@ -4,6 +4,7 @@
 
 #include "SmallIntMixedOperations.hpp"
 #include<iostream>
+#include <cstdint>
 
 int SmallIntMixedOperations::minValue() {
     if(empty())
