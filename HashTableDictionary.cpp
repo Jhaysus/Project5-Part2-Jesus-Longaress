@@ -39,6 +39,7 @@ void HashTableDictionary::clear() {
      maxTombstones = 0;
 
      maxValuesInTable = 0;
+    elapsed_ns = 0;
 
 }
 
@@ -391,3 +392,8 @@ void HashTableDictionary::printMask() {
     std::cout << "\nElements available map.\n";
     printMask(AVAILABLE);
 }
+
+// CSV helpers
+
+
+

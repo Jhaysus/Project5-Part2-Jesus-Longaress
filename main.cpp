@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <string>
 #include <sstream>
+#include <filesystem>
+
 
 #include "Operations.hpp"
 
@@ -117,30 +119,65 @@ int main(int argc, char *argv[]) {
 
     std::vector<Operation> operations;
     std::size_t N = 0;
+
+    // Save  for later
+    std::filesystem::create_directories("csvs");
+    const auto profileName = std::string("LRU_profile");
+    const std::string csvPath = "csvs/" + profileName + ".csv";
+    std::ofstream csv(csvPath, std::ios::app);
+    bool needHeader = (std::filesystem::file_size(csvPath) == 0);
+
+
+    // std::ofstream csv("csvs/" + profileName + ".csv");
+
+
+
     load_trace_strict_header(std::string(argv[1]), N, operations);
 
-    HashTableDictionary::PROBE_TYPE pType = HashTableDictionary::DOUBLE;
+    HashTableDictionary::PROBE_TYPE pType = HashTableDictionary::SINGLE;
     auto doWePerformCompaction = true;
     HashTableDictionary hashDictionary(
             tableSizeForN(N), pType, doWePerformCompaction);
 
     hashDictionary.clear();
-    std::cout << "Starting a run with N = " << N << " and " << operations.size() << " operations." << std::endl;
-    for (const auto &op: operations) {
-        // op.print();
 
-        switch (op.tag) {
-            case OpCode::Insert:
-                hashDictionary.insert(op.key);
-                break;
-            case OpCode::Erase:
-                (void) hashDictionary.remove(op.key);
-                break;
+    using clock = std::chrono::steady_clock;
+    std::vector<std::int64_t> trials_ns;
+    const int numTrials = 7;
+    trials_ns.reserve(numTrials);
+
+    for (int i = 0; i < numTrials; ++i) {
+        auto t0 = clock::now();
+        std::cout << "Starting a run with N = " << N << " and " << operations.size() << " operations." << std::endl;
+        for (const auto &op: operations) {
+            // op.print();
+
+            switch (op.tag) {
+                case OpCode::Insert:
+                    hashDictionary.insert(op.key);
+                    break;
+                case OpCode::Erase:
+                    (void) hashDictionary.remove(op.key);
+                    break;
+            }
         }
+        auto t1 = clock::now();
+        trials_ns.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+
     }
+    const size_t mid = trials_ns.size() / 2;     // the median of 0..numTrials
+    std::nth_element(trials_ns.begin(), trials_ns.begin()+mid, trials_ns.end());
+    hashDictionary.elapsed_ns = trials_ns[mid];
+
     std::cout << "in run trace printing csv.\n";
-    std::cout << HashTableDictionary::csvStatsHeader() << std::endl;
+    // std::cout << HashTableDictionary::csvStatsHeader() << std::endl;
+    // csv << HashTableDictionary::csvStatsHeader() << std::endl; //<--use and figure out how to save for future if we need to save the data
+    if (needHeader) {
+        csv << hashDictionary.csv_header()<< "\n";
+    }
     std::cout << hashDictionary.csvStats() << std::endl;
+
+
     std::cout << "in run trace printing csv ends.\n";
 
 
@@ -153,3 +190,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+

@@ -8,6 +8,8 @@
 #include<vector>
 #include<string>
 #include <cstdint>
+#include <sstream>
+
 
 
 class HashTableDictionary {
@@ -18,8 +20,9 @@ public:
     enum PROBE_TYPE {SINGLE, DOUBLE};
 
     HashTableDictionary( std::size_t tableSize_,
-        PROBE_TYPE probeType, bool doCompact=false, double compactionTriggerRate=0.95);
+        PROBE_TYPE probeType, bool doCompact=true, double compactionTriggerRate=0.95);
 
+    std::int64_t elapsed_ns = 0;   // total replay time (nanoseconds)
 
 
     bool insert( const std::string& v );
@@ -38,6 +41,30 @@ public:
     void clear();
     std::string csvStats();
     static std::string csvStatsHeader();
+
+    double elapsed_ms() const {
+        return static_cast<double>(elapsed_ns) / 1e6;
+    }
+
+    //helper
+    static std::string csv_header() {
+        return "impl,profile,trace_path,N,seed,elapsed_ms,ops_total,average_probes,eff_load_factor_pct,load_factor_pct,tombstones_pct,full_scans,compactions,compaction_state";
+    }
+
+    std::string build_csv_row( std::string impl, std::string profile, std::string trace_path, std::size_t N, unsigned seed, double elapsed_ms, std::size_t ops_total, const HashTableDictionary& dict)
+    {
+        std::ostringstream out;
+        out << impl << ","
+            << profile << ","
+            << trace_path << ","
+            << N << ","
+            << seed << ","
+            << elapsed_ms << ","
+            << ops_total << ",";
+
+
+        return out.str();
+    }
 
 
 private:
@@ -77,6 +104,7 @@ private:
     std::int64_t maxTombstones = 0;
 
     std::int64_t maxValuesInTable = 0;
+
 };
 
 
